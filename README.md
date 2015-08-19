@@ -4,9 +4,9 @@
 
 I saw [this post] (http://tuxette.nathalievilla.org/?p=1682) a few weeks ago on [R-bloggers] (http://www.r-bloggers.com/). It was an interesting idea of pulling down your Google Scholar data, processing it some and extracting interesting bits about it. The post that inspired this person is [here] (http://rogiersbart.blogspot.fr/2015/05/put-google-scholar-citations-on-your.html), wherein he pulled down his data and made a simple plot showing how many publications he had per year since the first one. It's an interesting proof-of-concept, but this plot already prominently sites on your Google Scholar profile page. What interested me was the co-author index and the word cloud from your publications' titles.
 
-The problem was that the post had a few typoes. :/ 
+The problem was that the post had a few typos in the code that broke it. :/ 
 
-# The get_all_publications() function pulls down the author of interests' publication list for further processing using get_publications() from the scholar package. Load the function by copying and pasting into your R session. It gets around the 20 publications per page limit on Google Scholar by looping through them 20 at a time.
+The get_all_publications() function pulls down the author of interests' publication list for further processing using get_publications() from the scholar package. Load the function by copying and pasting into your R session. It gets around the 20 publications per page limit on Google Scholar by looping through them 20 at a time.
 ```R
 get_all_publications = function(authorid) {
   # initializing the publication list
@@ -43,20 +43,18 @@ get_all_coauthors = function(my_id, me=NULL) {
   # remove "..." and yourself
   all_authors = all_authors[!(all_authors %in% c("..."))]
   all_authors = all_authors[-grep(me, all_authors)]
-  # make a data frame with authors by decreasing number of appearance
-  all_authors = data.frame(name=factor(all_authors, 
-    levels=names(sort(table(all_authors),decreasing=TRUE))))
+  all_authors = data.frame(names=names(sort(table(all_authors), decreasing=TRUE)), count=sort(table(all_authors), decreasing=TRUE), row.names=NULL)
 }
 ```
 The get_all_abstracts() function pulls down the abstracts for word cloud analysis using the get_abstract() function. 
 ``` R
 get_all_abstracts = function(my_id) {
   all_publications = get_all_publications(my_id)
-  all_abstracts = sapply(all_publications$pubid, get_abstract)
+  all_abstracts = sapply(all_publications$pubid, get_abstract, my_id = my_id)
   return(all_abstracts)
 }
 get_abstract = function(pub_id, my_id) {
-  print(pub_id)
+  #print(pub_id)
   paper_url = paste0("http://scholar.google.com/citations?view_op=view_citation&hl=fr&user=",
                      my_id, "&citation_for_view=", my_id,":", pub_id)
   paper_page = htmlTreeParse(paper_url, useInternalNodes=TRUE, encoding="utf-8")
@@ -80,9 +78,7 @@ my_id = "6jGizt0AAAAJ" #substitute your own ID to see yours
 
 all_authors = get_all_coauthors(my_id, me="Hurr") # replace your name with mine to make sure it eliminates you
 
-main_authors = all_authors[all_authors$name %in% names(which(table(all_authors$name)>1))]
-
-ggplot(main_authors, aes(x=name) + geom_bar(fill=brewer.pal(3, "Set2")[2]) +
+ggplot(all_authors, aes(x=name, y=count)) + geom_bar(fill=brewer.pal(3, "Set2")[2]) +
   xlab("co-author") + theme_bw() + theme(axis.text.x = element_text(angle=90, hjust=1))
 
 all_abstracts = get_all_abstracts(my_id)
